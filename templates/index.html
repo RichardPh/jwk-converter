@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keystore Tools</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+
+  <div class="w-full max-w-lg">
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-200">
+        <button id="tab-convert" onclick="switchTab('convert')"
+          class="tab-btn flex-1 py-3.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition">
+          JWK → JKS
+        </button>
+        <button id="tab-extract" onclick="switchTab('extract')"
+          class="tab-btn flex-1 py-3.5 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition">
+          P12 → Key
+        </button>
+      </div>
+
+      <div class="p-8">
+
+        <!-- ── TAB 1: JWK → JKS ── -->
+        <div id="panel-convert">
+          <p class="text-sm text-gray-500 mb-6">Upload a JWK JSON file and get a Java KeyStore (.jks) back.</p>
+
+          <form id="convertForm" class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">JWK File</label>
+              <div id="dropzone-convert" class="dropzone relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer transition hover:border-blue-400 hover:bg-blue-50">
+                <input id="fileInput-convert" type="file" name="jwk_file" accept=".json,application/json"
+                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                <svg class="mx-auto mb-2 h-8 w-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <p id="dropLabel-convert" class="text-sm text-gray-500">
+                  Drag & drop your <span class="font-medium text-gray-700">.json</span> JWK file here, or click to browse
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label for="alias" class="block text-sm font-medium text-gray-700 mb-1">
+                Alias <span class="text-gray-400 font-normal">(key name inside the JKS)</span>
+              </label>
+              <input id="alias" name="alias" type="text" placeholder="e.g. altinn-TEST.2024-12-06"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+
+            <div>
+              <label for="password-convert" class="block text-sm font-medium text-gray-700 mb-1">
+                JKS Password <span class="text-gray-400 font-normal">(min. 6 characters)</span>
+              </label>
+              <div class="relative">
+                <input id="password-convert" name="password" type="password" placeholder="Enter a secure password"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                <button type="button" onclick="togglePw('password-convert')"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabindex="-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" id="submitBtn-convert"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <span id="btnText-convert">Convert & Download .jks</span>
+              <svg id="spinner-convert" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </button>
+          </form>
+
+          <div id="errorBox-convert" class="hidden mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"></div>
+          <div id="successBox-convert" class="hidden mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700"></div>
+        </div>
+
+        <!-- ── TAB 2: P12 → Key ── -->
+        <div id="panel-extract" class="hidden">
+          <p class="text-sm text-gray-500 mb-6">Upload a .p12 file and extract the private key as PEM or JWK.</p>
+
+          <form id="extractForm" class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">P12 File</label>
+              <div id="dropzone-extract" class="dropzone relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer transition hover:border-blue-400 hover:bg-blue-50">
+                <input id="fileInput-extract" type="file" name="p12_file" accept=".p12,.pfx"
+                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                <svg class="mx-auto mb-2 h-8 w-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <p id="dropLabel-extract" class="text-sm text-gray-500">
+                  Drag & drop your <span class="font-medium text-gray-700">.p12</span> file here, or click to browse
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label for="password-extract" class="block text-sm font-medium text-gray-700 mb-1">P12 Password</label>
+              <div class="relative">
+                <input id="password-extract" name="password" type="password" placeholder="Enter the .p12 password"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                <button type="button" onclick="togglePw('password-extract')"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabindex="-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Output format -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Output Format</label>
+              <div class="flex gap-3">
+                <label class="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer hover:border-blue-400 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                  <input type="radio" name="format" value="pem" checked class="accent-blue-600" />
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">PEM</p>
+                    <p class="text-xs text-gray-400">private_key.pem</p>
+                  </div>
+                </label>
+                <label class="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer hover:border-blue-400 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                  <input type="radio" name="format" value="jwk" class="accent-blue-600" id="fmtJwk" />
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">JWK</p>
+                    <p class="text-xs text-gray-400">JSON Web Key</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- kid field, only shown when JWK is selected -->
+            <div id="kidField" class="hidden">
+              <label for="kid" class="block text-sm font-medium text-gray-700 mb-1">
+                Key ID (kid) <span class="text-gray-400 font-normal">— optional</span>
+              </label>
+              <input id="kid" name="kid" type="text" placeholder="e.g. altinn-TEST.2024-12-06"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+
+            <button type="submit" id="submitBtn-extract"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <span id="btnText-extract">Extract & Download Key</span>
+              <svg id="spinner-extract" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </button>
+          </form>
+
+          <div id="errorBox-extract" class="hidden mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"></div>
+          <div id="successBox-extract" class="hidden mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-gray-400 mt-4">
+      Requires Java (keytool) on your PATH &mdash; all processing happens locally
+    </p>
+  </div>
+
+  <script>
+    // ── Tab switching ──
+    function switchTab(tab) {
+      ["convert", "extract"].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.toggle("hidden", t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        btn.classList.toggle("text-blue-600", t === tab);
+        btn.classList.toggle("border-blue-600", t === tab);
+        btn.classList.toggle("text-gray-400", t !== tab);
+        btn.classList.toggle("border-transparent", t !== tab);
+      });
+    }
+
+    // ── Shared helpers ──
+    function togglePw(id) {
+      const el = document.getElementById(id);
+      el.type = el.type === "password" ? "text" : "password";
+    }
+
+    function setupDropzone(dropzoneId, fileInputId, labelId, accept) {
+      const dz = document.getElementById(dropzoneId);
+      const fi = document.getElementById(fileInputId);
+      const lbl = document.getElementById(labelId);
+
+      fi.addEventListener("change", () => {
+        if (fi.files[0]) {
+          lbl.innerHTML = `<span class="font-medium text-blue-600">${fi.files[0].name}</span> selected`;
+          dz.classList.add("border-blue-400", "bg-blue-50");
+        }
+      });
+      dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("border-blue-400", "bg-blue-50"); });
+      dz.addEventListener("dragleave", () => { if (!fi.files[0]) dz.classList.remove("border-blue-400", "bg-blue-50"); });
+      dz.addEventListener("drop", e => {
+        e.preventDefault();
+        if (e.dataTransfer.files[0]) { fi.files = e.dataTransfer.files; fi.dispatchEvent(new Event("change")); }
+      });
+    }
+
+    setupDropzone("dropzone-convert", "fileInput-convert", "dropLabel-convert");
+    setupDropzone("dropzone-extract", "fileInput-extract", "dropLabel-extract");
+
+    function setLoading(suffix, loading, idleText) {
+      document.getElementById(`submitBtn-${suffix}`).disabled = loading;
+      document.getElementById(`spinner-${suffix}`).classList.toggle("hidden", !loading);
+      document.getElementById(`btnText-${suffix}`).textContent = loading ? "Processing…" : idleText;
+    }
+
+    function showMsg(suffix, type, msg) {
+      const show = type === "error" ? `errorBox-${suffix}` : `successBox-${suffix}`;
+      const hide = type === "error" ? `successBox-${suffix}` : `errorBox-${suffix}`;
+      document.getElementById(show).textContent = msg;
+      document.getElementById(show).classList.remove("hidden");
+      document.getElementById(hide).classList.add("hidden");
+    }
+
+    function clearMsgs(suffix) {
+      [`errorBox-${suffix}`, `successBox-${suffix}`].forEach(id => document.getElementById(id).classList.add("hidden"));
+    }
+
+    async function submitForm(suffix, url, formData, filename, idleText) {
+      setLoading(suffix, true, idleText);
+      clearMsgs(suffix);
+      try {
+        const res = await fetch(url, { method: "POST", body: formData });
+        if (!res.ok) {
+          const data = await res.json();
+          showMsg(suffix, "error", data.error || "An unknown error occurred.");
+          return;
+        }
+        const blob = await res.blob();
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: filename });
+        document.body.appendChild(a); a.click(); a.remove();
+        showMsg(suffix, "success", `✓ ${filename} downloaded successfully.`);
+      } catch {
+        showMsg(suffix, "error", "Request failed. Is the server running?");
+      } finally {
+        setLoading(suffix, false, idleText);
+      }
+    }
+
+    // ── JWK → JKS form ──
+    document.getElementById("convertForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const file = document.getElementById("fileInput-convert").files[0];
+      const alias = document.getElementById("alias").value.trim();
+      const password = document.getElementById("password-convert").value.trim();
+
+      if (!file) return showMsg("convert", "error", "Please select a JWK file.");
+      if (!alias) return showMsg("convert", "error", "Please enter an alias.");
+      if (!password) return showMsg("convert", "error", "Please enter a password.");
+      if (password.length < 6) return showMsg("convert", "error", "Password must be at least 6 characters.");
+
+      const fd = new FormData();
+      fd.append("jwk_file", file);
+      fd.append("alias", alias);
+      fd.append("password", password);
+
+      await submitForm("convert", "/convert", fd, `${alias}.jks`, "Convert & Download .jks");
+    });
+
+    // ── P12 → Key form ──
+    document.getElementById("fmtJwk").addEventListener("change", () => {
+      document.getElementById("kidField").classList.toggle("hidden", !document.getElementById("fmtJwk").checked);
+    });
+    document.querySelectorAll("input[name='format']").forEach(r => {
+      r.addEventListener("change", () => {
+        document.getElementById("kidField").classList.toggle("hidden", document.querySelector("input[name='format']:checked").value !== "jwk");
+      });
+    });
+
+    document.getElementById("extractForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const file = document.getElementById("fileInput-extract").files[0];
+      const password = document.getElementById("password-extract").value.trim();
+      const fmt = document.querySelector("input[name='format']:checked").value;
+      const kid = document.getElementById("kid").value.trim();
+
+      if (!file) return showMsg("extract", "error", "Please select a .p12 file.");
+      if (!password) return showMsg("extract", "error", "Please enter the .p12 password.");
+
+      const fd = new FormData();
+      fd.append("p12_file", file);
+      fd.append("password", password);
+      fd.append("format", fmt);
+      fd.append("kid", kid);
+
+      const filename = fmt === "jwk" ? `${kid || "private_key"}.json` : "private_key.pem";
+      await submitForm("extract", "/extract", fd, filename, "Extract & Download Key");
+    });
+  </script>
+</body>
+</html>
